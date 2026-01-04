@@ -1,0 +1,107 @@
+STARTING: Format=csr, Threads=1, Size=160 160 160
+  SPARSEMV: 6.07434
+STARTING: Format=csr, Threads=2, Size=160 160 160
+  SPARSEMV: 6.29139
+STARTING: Format=csr, Threads=4, Size=160 160 160
+  SPARSEMV: 6.51797
+STARTING: Format=csr, Threads=8, Size=160 160 160
+  SPARSEMV: 6.89471
+STARTING: Format=csr, Threads=12, Size=160 160 160
+  SPARSEMV: 7.60568
+STARTING: Format=csr, Threads=16, Size=160 160 160
+  SPARSEMV: 8.26424
+STARTING: Format=csr, Threads=24, Size=160 160 160
+  SPARSEMV: 10.1715
+STARTING: Format=csr, Threads=32, Size=160 160 160
+  SPARSEMV: 12.3682
+STARTING: Format=csr, Threads=36, Size=160 160 160
+  SPARSEMV: 13.2168
+STARTING: Format=csr, Threads=48, Size=160 160 160
+  SPARSEMV: 17.4252
+STARTING: Format=csr, Threads=64, Size=160 160 160
+  SPARSEMV: 14.8888
+STARTING: Format=csr, Threads=96, Size=160 160 160
+  SPARSEMV: 19.0137
+STARTING: Format=csr, Threads=128, Size=160 160 160
+  SPARSEMV: 32.9486
+
+STARTING: Format=ell7, Threads=1, Size=160 160 160
+  SPARSEMV: 5.44574
+STARTING: Format=ell7, Threads=2, Size=160 160 160
+  SPARSEMV: 5.62982
+STARTING: Format=ell7, Threads=4, Size=160 160 160
+  SPARSEMV: 5.95666
+STARTING: Format=ell7, Threads=8, Size=160 160 160
+  SPARSEMV: 6.39178
+STARTING: Format=ell7, Threads=12, Size=160 160 160
+  SPARSEMV: 6.83345
+STARTING: Format=ell7, Threads=16, Size=160 160 160
+  SPARSEMV: 7.70053
+STARTING: Format=ell7, Threads=24, Size=160 160 160
+  SPARSEMV: 9.42473
+STARTING: Format=ell7, Threads=32, Size=160 160 160
+  SPARSEMV: 11.6815
+STARTING: Format=ell7, Threads=36, Size=160 160 160
+  SPARSEMV: 13.0912
+STARTING: Format=ell7, Threads=48, Size=160 160 160
+  SPARSEMV: 17.5091
+STARTING: Format=ell7, Threads=64, Size=160 160 160
+  SPARSEMV: 14.2578
+STARTING: Format=ell7, Threads=96, Size=160 160 160
+  SPARSEMV: 15.2316
+STARTING: Format=ell7, Threads=128, Size=160 160 160
+  SPARSEMV: 31.5896
+
+STARTING: Format=ell8, Threads=1, Size=160 160 160
+  SPARSEMV: 6.50869
+STARTING: Format=ell8, Threads=2, Size=160 160 160
+  SPARSEMV: 6.69672
+STARTING: Format=ell8, Threads=4, Size=160 160 160
+  SPARSEMV: 7.26945
+STARTING: Format=ell8, Threads=8, Size=160 160 160
+  SPARSEMV: 7.61221
+STARTING: Format=ell8, Threads=12, Size=160 160 160
+  SPARSEMV: 8.09416
+STARTING: Format=ell8, Threads=16, Size=160 160 160
+  SPARSEMV: 8.81122
+STARTING: Format=ell8, Threads=24, Size=160 160 160
+  SPARSEMV: 10.5972
+STARTING: Format=ell8, Threads=32, Size=160 160 160
+  SPARSEMV: 13.0552
+STARTING: Format=ell8, Threads=36, Size=160 160 160
+  SPARSEMV: 13.9194
+STARTING: Format=ell8, Threads=48, Size=160 160 160
+  SPARSEMV: 18.4913
+STARTING: Format=ell8, Threads=64, Size=160 160 160
+  SPARSEMV: 16.2627
+STARTING: Format=ell8, Threads=96, Size=160 160 160
+  SPARSEMV: 19.3763
+STARTING: Format=ell8, Threads=128, Size=160 160 160
+  SPARSEMV: 33.8639
+
+STARTING: Format=tiled, Threads=1, Size=160 160 160
+  SPARSEMV: 5.05137
+STARTING: Format=tiled, Threads=2, Size=160 160 160
+  SPARSEMV: 5.44383
+STARTING: Format=tiled, Threads=4, Size=160 160 160
+  SPARSEMV: 5.4731
+STARTING: Format=tiled, Threads=8, Size=160 160 160
+  SPARSEMV: 5.83731
+STARTING: Format=tiled, Threads=12, Size=160 160 160
+  SPARSEMV: 6.18788
+STARTING: Format=tiled, Threads=16, Size=160 160 160
+  SPARSEMV: 7.2087
+STARTING: Format=tiled, Threads=24, Size=160 160 160
+  SPARSEMV: 8.82633
+STARTING: Format=tiled, Threads=32, Size=160 160 160
+  SPARSEMV: 11.4961
+STARTING: Format=tiled, Threads=36, Size=160 160 160
+  SPARSEMV: 12.5542
+STARTING: Format=tiled, Threads=48, Size=160 160 160
+  SPARSEMV: 17.208
+STARTING: Format=tiled, Threads=64, Size=160 160 160
+  SPARSEMV: 13.969
+STARTING: Format=tiled, Threads=96, Size=160 160 160
+  SPARSEMV: 16.0648
+STARTING: Format=tiled, Threads=128, Size=160 160 160
+  SPARSEMV: 31.5198

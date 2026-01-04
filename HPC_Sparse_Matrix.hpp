@@ -50,6 +50,49 @@ const int max_external = 100000;
 const int max_num_messages = 500;
 const int max_num_neighbors = max_num_messages;
 
+#include <stdint.h>
+#include <string>
+
+typedef struct csr_t {
+  uint64_t m;
+  uint64_t n;
+  uint64_t non_zeros;
+  int64_t *row_ptr;
+  int64_t *col_ind;
+  double *nz;
+} csr_t;
+
+typedef struct ellpack8_row_nz_t { double val[8]; } ellpack8_row_nz_t;
+typedef struct ellpack8_row_ind_t { int64_t col[8]; } ellpack8_row_ind_t;
+
+typedef struct ellpack8_t {
+  uint64_t m;
+  uint64_t n;
+  ellpack8_row_nz_t *nz;
+  ellpack8_row_ind_t *col_ind;
+} ellpack8_t;
+
+typedef struct ellpack7_t {
+  uint64_t m;
+  uint64_t n;
+  double *nz[7];
+  int64_t *col_ind[7];
+} ellpack7_t;
+
+#define ELLPACK7_BLOCK_SIZE 8
+typedef struct ellpack7_tiled_t {
+  uint64_t m;
+  uint64_t n;
+  uint64_t non_zeros;
+  double *nz;
+  int64_t *col_ind;
+  int total_elements_count;
+} ellpack7_tiled_t;
+
+typedef struct vector_t {
+  uint64_t length;
+  double *vals;
+} vector_t;
 
 struct HPC_Sparse_Matrix_STRUCT {
   char   *title;
@@ -64,6 +107,12 @@ struct HPC_Sparse_Matrix_STRUCT {
   double ** ptr_to_vals_in_row;
   int ** ptr_to_inds_in_row;
   double ** ptr_to_diags;
+
+  csr_t            *csr;
+  ellpack8_t       *ell8;
+  ellpack7_t       *ell7;
+  ellpack7_tiled_t *ell7_tiled;
+  std::string selected_format;
 
 #ifdef USING_MPI
   int num_external;

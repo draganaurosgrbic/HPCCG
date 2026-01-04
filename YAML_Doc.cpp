@@ -64,10 +64,10 @@ string YAML_Doc::generateYAML(){
   else 
     filename = "./" + filename;
 
-  ofstream myfile;
-  myfile.open(filename.c_str());
-  myfile << yaml;
-  myfile.close();
+  // ofstream myfile;
+  // myfile.open(filename.c_str());
+  // myfile << yaml;
+  // myfile.close();
   return yaml;
 }
 

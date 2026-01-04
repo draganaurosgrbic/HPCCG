@@ -63,14 +63,133 @@ using std::endl;
 #include <cmath>
 #include "HPC_sparsemv.hpp"
 
-int HPC_sparsemv( HPC_Sparse_Matrix *A, 
-		 const double * const x, double * const y)
-{
+#include <stdint.h>
+
+void csr_spmv(csr_t *m, const double *x, double *y) {
+  const double * __restrict__ nz = (const double *)__builtin_assume_aligned(m->nz, 64);
+  const int64_t * __restrict__ col_ind = (const int64_t *)__builtin_assume_aligned(m->col_ind, 64);
+  const int64_t * __restrict__ row_ptr = (const int64_t *)__builtin_assume_aligned(m->row_ptr, 64);
+
+  const double * __restrict__ x_ptr = (const double *)__builtin_assume_aligned(x, 64);
+  double * __restrict__ y_ptr = (double *)__builtin_assume_aligned(y, 64);
+
+  #pragma omp parallel for schedule(static)
+  for (uint64_t i = 0; i < m->m; ++i) {
+    double sum = 0.0;
+    for (int64_t j = row_ptr[i]; j < row_ptr[i+1]; ++j) {
+      sum += nz[j] * x_ptr[col_ind[j]];
+    }
+    y_ptr[i] = sum;
+  }
+}
+
+void ellpack8_spmv(ellpack8_t *m, const double * __restrict__ x, double * __restrict__ y) {
+  uint64_t nrows = m->m;
+
+  const auto * __restrict__ nz = (const ellpack8_row_nz_t *)__builtin_assume_aligned(m->nz, 64);
+  const auto * __restrict__ col_ind = (const ellpack8_row_ind_t *)__builtin_assume_aligned(m->col_ind, 64);
+  
+  const double * __restrict__ x_ptr = (const double *)__builtin_assume_aligned(x, 64);
+  double * __restrict__ y_ptr = (double *)__builtin_assume_aligned(y, 64);
+
+  #pragma omp parallel for schedule(static)
+  for (uint64_t i = 0; i < nrows; i++) {
+    y_ptr[i] = nz[i].val[0] * x_ptr[col_ind[i].col[0]] +
+               nz[i].val[1] * x_ptr[col_ind[i].col[1]] +
+               nz[i].val[2] * x_ptr[col_ind[i].col[2]] +
+               nz[i].val[3] * x_ptr[col_ind[i].col[3]] +
+               nz[i].val[4] * x_ptr[col_ind[i].col[4]] +
+               nz[i].val[5] * x_ptr[col_ind[i].col[5]] +
+               nz[i].val[6] * x_ptr[col_ind[i].col[6]] +
+               nz[i].val[7] * x_ptr[col_ind[i].col[7]];
+  }
+}
+
+void ellpack7_spmv(ellpack7_t *m, const double * __restrict__ x, double * __restrict__ y) {
+  uint64_t nrows = m->m;
+
+  const double * __restrict__ nz0 = (const double *)__builtin_assume_aligned(m->nz[0], 64);
+  const double * __restrict__ nz1 = (const double *)__builtin_assume_aligned(m->nz[1], 64);
+  const double * __restrict__ nz2 = (const double *)__builtin_assume_aligned(m->nz[2], 64);
+  const double * __restrict__ nz3 = (const double *)__builtin_assume_aligned(m->nz[3], 64);
+  const double * __restrict__ nz4 = (const double *)__builtin_assume_aligned(m->nz[4], 64);
+  const double * __restrict__ nz5 = (const double *)__builtin_assume_aligned(m->nz[5], 64);
+  const double * __restrict__ nz6 = (const double *)__builtin_assume_aligned(m->nz[6], 64);
+
+  const int64_t * __restrict__ ind0 = (const int64_t *)__builtin_assume_aligned(m->col_ind[0], 64);
+  const int64_t * __restrict__ ind1 = (const int64_t *)__builtin_assume_aligned(m->col_ind[1], 64);
+  const int64_t * __restrict__ ind2 = (const int64_t *)__builtin_assume_aligned(m->col_ind[2], 64);
+  const int64_t * __restrict__ ind3 = (const int64_t *)__builtin_assume_aligned(m->col_ind[3], 64);
+  const int64_t * __restrict__ ind4 = (const int64_t *)__builtin_assume_aligned(m->col_ind[4], 64);
+  const int64_t * __restrict__ ind5 = (const int64_t *)__builtin_assume_aligned(m->col_ind[5], 64);
+  const int64_t * __restrict__ ind6 = (const int64_t *)__builtin_assume_aligned(m->col_ind[6], 64);
+
+  const double * __restrict__ x_ptr = (const double *)__builtin_assume_aligned(x, 64);
+  double * __restrict__ y_ptr = (double *)__builtin_assume_aligned(y, 64);
+
+  #pragma omp parallel for schedule(static)
+  for (uint64_t i = 0; i < nrows; i++) {
+    y_ptr[i] = nz0[i] * x_ptr[ind0[i]] +
+               nz1[i] * x_ptr[ind1[i]] +
+               nz2[i] * x_ptr[ind2[i]] +
+               nz3[i] * x_ptr[ind3[i]] +
+               nz4[i] * x_ptr[ind4[i]] +
+               nz5[i] * x_ptr[ind5[i]] +
+               nz6[i] * x_ptr[ind6[i]];
+  }
+}
+
+
+void ellpack7_tiled_spmv(const ellpack7_tiled_t *matrix, const double * __restrict__ x, double * __restrict__ y) {
+  uint64_t nrows = matrix->m;
+
+  const double * __restrict__ nz = (const double *)__builtin_assume_aligned(matrix->nz, 64);
+  const int64_t * __restrict__ col_ind = (const int64_t *)__builtin_assume_aligned(matrix->col_ind, 64);
+
+  const double * __restrict__ x_ptr = (const double *)__builtin_assume_aligned(x, 64);
+  double * __restrict__ y_ptr = (double *)__builtin_assume_aligned(y, 64);
+
+  #pragma omp parallel for schedule(static)
+  for (uint64_t j = 0; j < nrows; j += 8) {
+    uint64_t i = j * 7;
+    
+    #pragma omp simd
+    for (uint64_t row = 0; row < 8; ++row) {
+      y_ptr[j + row] = 
+        nz[i + row]      * x_ptr[col_ind[i + row]] + 
+        nz[i + row + 8]  * x_ptr[col_ind[i + row + 8]] +  
+        nz[i + row + 16] * x_ptr[col_ind[i + row + 16]] +  
+        nz[i + row + 24] * x_ptr[col_ind[i + row + 24]] +
+        nz[i + row + 32] * x_ptr[col_ind[i + row + 32]] +
+        nz[i + row + 40] * x_ptr[col_ind[i + row + 40]] +
+        nz[i + row + 48] * x_ptr[col_ind[i + row + 48]];
+    }
+  }
+}
+
+
+int HPC_sparsemv(HPC_Sparse_Matrix *A, const double * const x, double * const y) {
+  if (A->selected_format == "tiled" && A->ell7_tiled != NULL) {
+      ellpack7_tiled_spmv(A->ell7_tiled, x, y);
+      return 0;
+  } 
+  else if (A->selected_format == "ell8" && A->ell8 != NULL) {
+      ellpack8_spmv(A->ell8, x, y);
+      return 0;
+  }
+  else if (A->selected_format == "ell7" && A->ell7 != NULL) {
+      ellpack7_spmv(A->ell7, x, y);
+      return 0;
+  }
+  else if (A->selected_format == "csr" && A->csr != NULL) {
+      csr_spmv(A->csr, x, y);
+      return 0;
+  }
 
   const int nrow = (const int) A->local_nrow;
 
 #ifdef USING_OMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(static)
 #endif
   for (int i=0; i< nrow; i++)
     {

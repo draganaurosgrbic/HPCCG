@@ -57,6 +57,102 @@ using std::endl;
 #include <cstdio>
 #include <cassert>
 #include "generate_matrix.hpp"
+
+#include <stdint.h>
+#include <string.h>
+
+
+void fill_custom_formats(HPC_Sparse_Matrix *A) {
+    int nrows = A->local_nrow;
+    int ncols = A->local_ncol;
+
+    A->csr = new csr_t;
+    A->csr->m = nrows;
+    A->csr->n = ncols;
+    
+    int64_t total_nnz = 0;
+    for(int i=0; i<nrows; i++) total_nnz += A->nnz_in_row[i];
+    A->csr->non_zeros = total_nnz;
+    
+    A->csr->row_ptr = (int64_t*)aligned_alloc(64, (nrows + 1) * sizeof(int64_t));
+    A->csr->col_ind = (int64_t*)aligned_alloc(64, total_nnz * sizeof(int64_t));
+    A->csr->nz = (double*)aligned_alloc(64, total_nnz * sizeof(double));
+
+    int64_t current_nz_sum = 0;
+    for (int i = 0; i < nrows; i++) {
+        A->csr->row_ptr[i] = current_nz_sum;
+        current_nz_sum += A->nnz_in_row[i];
+    }
+    A->csr->row_ptr[nrows] = total_nnz;
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < nrows; i++) {
+        int64_t row_start = A->csr->row_ptr[i];
+        for (int j = 0; j < A->nnz_in_row[i]; j++) {
+            A->csr->nz[row_start + j] = A->ptr_to_vals_in_row[i][j];
+            A->csr->col_ind[row_start + j] = A->ptr_to_inds_in_row[i][j];
+        }
+    }
+
+    A->ell8 = new ellpack8_t;
+    A->ell8->m = nrows; A->ell8->n = ncols;
+    A->ell8->nz = (ellpack8_row_nz_t*)aligned_alloc(64, nrows * sizeof(ellpack8_row_nz_t));
+    A->ell8->col_ind = (ellpack8_row_ind_t*)aligned_alloc(64, nrows * sizeof(ellpack8_row_ind_t));
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < nrows; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (j < A->nnz_in_row[i]) {
+                A->ell8->nz[i].val[j] = A->ptr_to_vals_in_row[i][j];
+                A->ell8->col_ind[i].col[j] = A->ptr_to_inds_in_row[i][j];
+            } else {
+                A->ell8->nz[i].val[j] = 0.0;
+                A->ell8->col_ind[i].col[j] = 0;
+            }
+        }
+    }
+
+    A->ell7 = new ellpack7_t;
+    A->ell7->m = nrows; A->ell7->n = ncols;
+    for (int j = 0; j < 7; j++) {
+        A->ell7->nz[j] = (double*)aligned_alloc(64, nrows * sizeof(double));
+        A->ell7->col_ind[j] = (int64_t*)aligned_alloc(64, nrows * sizeof(int64_t));
+    }
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < nrows; i++) {
+        for (int j = 0; j < 7; j++) {
+            if (j < A->nnz_in_row[i]) {
+                A->ell7->nz[j][i] = A->ptr_to_vals_in_row[i][j];
+                A->ell7->col_ind[j][i] = A->ptr_to_inds_in_row[i][j];
+            } else {
+                A->ell7->nz[j][i] = 0.0;
+                A->ell7->col_ind[j][i] = 0;
+            }
+        }
+    }
+
+    A->ell7_tiled = new ellpack7_tiled_t;
+    A->ell7_tiled->m = nrows; A->ell7_tiled->n = ncols;
+    int tiled_rows = ((nrows + 7) / 8) * 8; 
+    A->ell7_tiled->nz = (double*)aligned_alloc(64, tiled_rows * 7 * sizeof(double));
+    A->ell7_tiled->col_ind = (int64_t*)aligned_alloc(64, tiled_rows * 7 * sizeof(int64_t));
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < tiled_rows; i++) {
+        for (int j = 0; j < 7; j++) {
+            int idx = (i / 8) * 8 * 7 + j * 8 + (i % 8);
+            if (i < nrows && j < A->nnz_in_row[i]) {
+                A->ell7_tiled->nz[idx] = A->ptr_to_vals_in_row[i][j];
+                A->ell7_tiled->col_ind[idx] = A->ptr_to_inds_in_row[i][j];
+            } else {
+                A->ell7_tiled->nz[idx] = 0.0;
+                A->ell7_tiled->col_ind[idx] = 0;
+            }
+        }
+    }
+}
+
 void generate_matrix(int nx, int ny, int nz, HPC_Sparse_Matrix **A, double **x, double **b, double **xexact)
 
 {
@@ -78,9 +174,7 @@ void generate_matrix(int nx, int ny, int nz, HPC_Sparse_Matrix **A, double **x, 
   *A = new HPC_Sparse_Matrix; // Allocate matrix struct and fill it
   (*A)->title = 0;
 
-
-  // Set this bool to true if you want a 7-pt stencil instead of a 27 pt stencil
-  bool use_7pt_stencil = false;
+  bool use_7pt_stencil = true;
 
   int local_nrow = nx*ny*nz; // This is the size of our subblock
   assert(local_nrow>0); // Must have something to work with
@@ -99,10 +193,16 @@ void generate_matrix(int nx, int ny, int nz, HPC_Sparse_Matrix **A, double **x, 
   (*A)->ptr_to_inds_in_row = new int   *[local_nrow];
   (*A)->ptr_to_diags       = new double*[local_nrow];
 
-  *x = new double[local_nrow];
-  *b = new double[local_nrow];
-  *xexact = new double[local_nrow];
+  *x = (double*)aligned_alloc(64, local_nrow * sizeof(double));
+  *b = (double*)aligned_alloc(64, local_nrow * sizeof(double));
+  *xexact = (double*)aligned_alloc(64, local_nrow * sizeof(double));
 
+  #pragma omp parallel for schedule(static)
+  for (int i = 0; i < local_nrow; i++) {
+      (*x)[i] = 0.0;
+      (*b)[i] = 0.0;
+      (*xexact)[i] = 1.0;
+  }
 
   // Allocate arrays that are of length local_nnz
   (*A)->list_of_vals = new double[local_nnz];
@@ -166,6 +266,13 @@ void generate_matrix(int nx, int ny, int nz, HPC_Sparse_Matrix **A, double **x, 
   (*A)->local_nrow = local_nrow;
   (*A)->local_ncol = local_nrow;
   (*A)->local_nnz = local_nnz;
+
+  (*A)->csr = NULL;
+  (*A)->ell8 = NULL;
+  (*A)->ell7 = NULL;
+  (*A)->ell7_tiled = NULL;
+  (*A)->selected_format = "tiled";
+  fill_custom_formats(*A);
 
   return;
 }

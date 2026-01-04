@@ -134,22 +134,35 @@ int main(int argc, char *argv[])
 #endif
 
 
-  if(argc != 2 && argc!=4) {
+  if(argc != 2 && argc != 4 && argc != 5) {
     if (rank==0)
       cerr << "Usage:" << endl
-	   << "Mode 1: " << argv[0] << " nx ny nz" << endl
-	   << "     where nx, ny and nz are the local sub-block dimensions, or" << endl
-	   << "Mode 2: " << argv[0] << " HPC_data_file " << endl
-	   << "     where HPC_data_file is a globally accessible file containing matrix data." << endl;
+     << "Mode 1: " << argv[0] << " nx ny nz [format]" << endl
+     << "     format options: csr, ell8, ell7, tiled, original (default: tiled)" << endl
+     << "Mode 2: " << argv[0] << " HPC_data_file " << endl;
     exit(1);
   }
 
-  if (argc==4) 
+if (argc >= 4) 
   {
     nx = atoi(argv[1]);
     ny = atoi(argv[2]);
     nz = atoi(argv[3]);
+
+    std::string selected_format = "tiled";
+    
+    if (argc == 5) {
+        selected_format = argv[4];
+    }
+
     generate_matrix(nx, ny, nz, &A, &x, &b, &xexact);
+
+    if (A != NULL) {
+        A->selected_format = selected_format; 
+    } else {
+        cerr << "Error: Matrix allocation failed!" << endl;
+        exit(1);
+    }
   }
   else
   {

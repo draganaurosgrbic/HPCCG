@@ -64,19 +64,19 @@ int waxpby (const int n, const double alpha, const double * const x,
 {  
   if (alpha==1.0) {
 #ifdef USING_OMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(static)
 #endif
     for (int i=0; i<n; i++) w[i] = x[i] + beta * y[i];
   }
   else if(beta==1.0) {
 #ifdef USING_OMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(static)
 #endif
     for (int i=0; i<n; i++) w[i] = alpha * x[i] + y[i];
   }
   else {
 #ifdef USING_OMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(static)
 #endif
     for (int i=0; i<n; i++) w[i] = alpha * x[i] + beta * y[i];
   }
