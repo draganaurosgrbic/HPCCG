@@ -10,7 +10,7 @@
 
 export PATH="/scratch/dg76/bin:$PATH"
 
-THREADS=(1 2 4 8 16 24 32 48 64 80 96)
+THREADS=(1 2 3 4 6 8 12 16 24 32)
 FORMATS=("csr" "ell7" "ell8" "tiled")
 SIZES=("80 80 80" "100 100 100" "160 160 160" "200 200 200" "250 250 250")
 
@@ -37,14 +37,8 @@ for sz in "${SIZES[@]}"; do
 
         for t in "${THREADS[@]}"; do
             
-            if [ $t -gt 48 ]; then
-                export OMP_PROC_BIND=spread
-                NUMA_CMD="numactl --interleave=all"
-            else
-                export OMP_PROC_BIND=close
-                NUMA_CMD="numactl --cpunodebind=0 --membind=0"
-            fi
-            
+            export OMP_PROC_BIND=close
+            NUMA_CMD="numactl --cpunodebind=0 --membind=0"
             export OMP_NUM_THREADS=$t
             
             PERF_FILE="perf_spr_${fmt}_${sz_name}_t${t}_${JOB_ID}.data"
