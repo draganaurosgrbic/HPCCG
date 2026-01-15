@@ -12,7 +12,7 @@ export PATH="/scratch/dg76/bin:$PATH"
 
 THREADS=(1 2 3 4 6 8 12 16 24 32)
 FORMATS=("csr" "ell7" "ell8" "tiled")
-SIZES=("80 80 80" "100 100 100" "160 160 160" "200 200 200" "250 250 250")
+SIZES=("80 80 80" "100 100 100" "120 120 120" "160 160 160" "200 200 200" "250 250 250")
 
 EXEC_PATH="$(pwd)/test_HPCCG"
 export OMP_PLACES=cores
