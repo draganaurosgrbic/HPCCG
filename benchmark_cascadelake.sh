@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=spmv_cascadelake
-#SBATCH --output=spmv_cascadelake_%j.log
+#SBATCH --job-name=hpccg_cascadelake
+#SBATCH --output=hpccg_cascadelake_%j.log
 #SBATCH --constraint=cascadelake
 #SBATCH --partition=commons
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=40
-#SBATCH --time=04:00:00
+#SBATCH --time=06:00:00
 
 export PATH="/scratch/dg76/bin:$PATH"
 
@@ -15,7 +15,6 @@ FORMATS=("csr" "ell7" "ell8" "tiled")
 SIZES=("80 80 80" "100 100 100" "120 120 120" "160 160 160" "200 200 200" "250 250 250")
 
 EXEC_PATH="$(pwd)/test_HPCCG"
-export OMP_PLACES=cores
 JOB_ID=${SLURM_JOB_ID:-"pid_$$"}
 
 lscpu
@@ -37,20 +36,20 @@ for sz in "${SIZES[@]}"; do
 
         for t in "${THREADS[@]}"; do
             
-            export OMP_PROC_BIND=close
-            NUMA_CMD="numactl --cpunodebind=0 --membind=0"
+            export OMP_PROC_BIND=spread
             export OMP_NUM_THREADS=$t
-            
+            export OMP_PLACES=cores
+
             PERF_FILE="perf_${fmt}_${sz_name}_t${t}_${JOB_ID}.data"
             
             echo "STARTING: Format=$fmt, Threads=$t, Size=$sz"
             
             perf record -o "$PERF_FILE" -g \
-                -e task-clock,cycles,instructions,L1-dcache-load-misses,LLC-load-misses \
-                $NUMA_CMD $EXEC_PATH $sz $fmt
+                -e task-clock,cycles,instructions,L1-dcache-load-misses,l2_rqsts.all_demand_miss,LLC-load-misses \
+                $EXEC_PATH $sz $fmt
             
             if [ -f "$PERF_FILE" ]; then
-                python3 parse_perf2.py $fmt_mode "$PERF_FILE"
+                python3 parse_perf.py $fmt_mode "$PERF_FILE"
                 rm "$PERF_FILE"
             fi
             
